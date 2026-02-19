@@ -1,70 +1,152 @@
 import { Utensils } from "lucide-react";
-import ListRecipes from "./components/ListRecipes";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import ListRecipes from "./components/ListRecipes";
+
+const FILTER_BY_CATEGORY =
+  "https://www.themealdb.com/api/json/v1/1/filter.php?c=";
+const FILTER_BY_AREA = "https://www.themealdb.com/api/json/v1/1/filter.php?a=";
+const SEARCH_BY_NAME = "https://www.themealdb.com/api/json/v1/1/search.php?s=";
+const SEARCH_BY_FIRST_LETTER =
+  "https://www.themealdb.com/api/json/v1/1/search.php?f=";
+const SEARCH_BY_MAIN_INGREDIENT =
+  "https://www.themealdb.com/api/json/v1/1/filter.php?i=";
+
+const SEARCH_TYPES = {
+  name: { label: "Name", url: SEARCH_BY_NAME },
+  category: { label: "Category", url: FILTER_BY_CATEGORY },
+  area: { label: "Area", url: FILTER_BY_AREA },
+  letter: { label: "First letter", url: SEARCH_BY_FIRST_LETTER },
+  ingredient: { label: "Main ingredient", url: SEARCH_BY_MAIN_INGREDIENT },
+};
 
 function App() {
   const [recipes, setRecipes] = useState([]);
-  const [search, setSearch] = useState("chicken");
+  const [search, setSearch] = useState("");
+  const [confirmedSearch, setConfirmedSearch] = useState("");
+  const [searchType, setSearchType] = useState("name");
+
+  const [requestUrl, setRequestUrl] = useState(SEARCH_BY_NAME + "pork");
 
   useEffect(() => {
     axios
-      .get(`https://www.themealdb.com/api/json/v1/1/search.php?s=${search}`)
-      // .get(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${search}`)
+      .get(requestUrl)
       .then(({ data }) => {
         setRecipes(data.meals || []);
+        setConfirmedSearch("pork");
       })
       .catch(console.log);
   }, []);
 
+  useEffect(() => {
+    if (!requestUrl) return;
+
+    axios
+      .get(requestUrl)
+      .then(({ data }) => {
+        setRecipes(data.meals || []);
+      })
+      .catch(console.log);
+  }, [requestUrl]);
+
+  const handleSearch = () => {
+    if (!search.trim()) return;
+
+    const baseUrl = SEARCH_TYPES[searchType].url;
+    setConfirmedSearch(search);
+    setRequestUrl(baseUrl + search);
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+
+    if (searchType === "letter") {
+      setSearch(value.slice(0, 1).toLowerCase());
+    } else {
+      setSearch(value);
+    }
+  };
+
+  const handleSearchTypeChange = (e) => {
+    setSearchType(e.target.value);
+    setSearch("");
+    setConfirmedSearch("");
+    setRecipes([]);
+    setRequestUrl("");
+  };
+
   return (
     <main className="min-h-screen max-w-5xl mx-auto px-6 py-8">
-      <header className="text-center mb-8">
-        <h1 className="flex justify-center items-center gap-3 text-4xl font-bold">
-          <Utensils size={36} />
-          Recipe Finder
+      <header className="text-center mb-10">
+        <h1 className="flex flex-wrap justify-center items-center gap-3 text-4xl xs:text-lg font-extrabold text-center text-[#fe7e60]">
+          <Utensils className="h-9 w-9 shrink-0" />
+          <span className="whitespace-normal sm:whitespace-nowrap">
+            Recipe Finder
+          </span>
         </h1>
-        <p className="mt-2 text-slate-600">
+        <p className="text-slate-700 mt-2">
           Find delicious recipes from around the world
-        </p>
-
-        <p className="mt-2 text-sm text-slate-500">
-          Data from{" "}
-          <a
-            href="https://www.themealdb.com/api.php"
-            target="_blank"
-            className="underline font-medium hover:text-slate-700"
-          >
-            TheMealDB
-          </a>
         </p>
       </header>
 
-      <section className="flex gap-3 justify-center mb-10">
+      <section className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+        <select
+          value={searchType}
+          onChange={handleSearchTypeChange}
+          className="px-4 py-2 border rounded-lg cursor-pointer"
+        >
+          {Object.entries(SEARCH_TYPES).map(([key, item]) => (
+            <option key={key} value={key}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+
         <input
           type="text"
-          placeholder="Search for meal or keywords"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300"
+          onChange={handleInputChange}
+          maxLength={searchType === "letter" ? 1 : undefined}
+          placeholder={
+            searchType === "letter" ? "One letter only" : "Type your search"
+          }
+          className="w-full sm:max-w-md px-4 py-2 border rounded-lg"
         />
 
         <button
-          type="button"
-          className="px-6 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition"
+          onClick={handleSearch}
+          disabled={!search.trim()}
+          className="px-6 py-2 bg-slate-900 text-white rounded-lg disabled:opacity-50 cursor-pointer"
         >
           Search
         </button>
       </section>
 
       {recipes.length === 0 && (
-        <article className="text-center text-slate-500 mt-10">
-          <p>The recipe {search} is not found</p>
-        </article>
+        <section className="flex justify-center mt-10">
+          <div
+            className={` flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center justify-center rounded-md border px-4 py-3 text-sm max-w-lg w-full${confirmedSearch === "" ? "border-blue-300 bg-blue-50 text-blue-700" : "border-red-300 bg-red-50 text-red-700"}`}
+          >
+            {confirmedSearch === "" ? (
+              <span className="font-medium">
+                Select a search type and enter a value
+              </span>
+            ) : (
+              <>
+                <span className="font-medium">No recipes found for</span>
+
+                <span className="italic break-all sm:break-normal">
+                  "{confirmedSearch}"
+                </span>
+
+                <span>. Try another search term!</span>
+              </>
+            )}
+          </div>
+        </section>
       )}
 
-      {/* LIST */}
-      <ListRecipes recipes={recipes} search={search} />
+      <ListRecipes recipes={recipes} search={confirmedSearch} />
     </main>
   );
 }
