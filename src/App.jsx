@@ -27,6 +27,7 @@ function App() {
 
   const [recipes, setRecipes] = useState([]);
   const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const [confirmedSearch, setConfirmedSearch] = useState("pork");
   const [searchType, setSearchType] = useState("name");
@@ -35,12 +36,17 @@ function App() {
   useEffect(() => {
     if (!requestUrl) return;
 
+    setIsLoading(true);
+
     axios
       .get(requestUrl)
       .then(({ data }) => {
         setRecipes(data.meals || []);
       })
-      .catch(console.log);
+      .catch(console.log)
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [requestUrl]);
 
   const handleSearch = () => {
@@ -67,8 +73,7 @@ function App() {
     if (value === "reset") {
       setSearchType("reset");
       setSearch("");
-      setConfirmedSearch("pork");
-      setRecipes([]);
+      setConfirmedSearch("egg");
       setRequestUrl(RESET_URL);
       return;
     }
@@ -132,10 +137,20 @@ function App() {
         </button>
       </section>
 
-      {recipes.length === 0 && (
+      {isLoading && (
+        <p className="text-center text-lg text-gray-700 animate-pulse">
+          Loading recipes...
+        </p>
+      )}
+
+      {!isLoading && recipes.length === 0 && (
         <section className="flex justify-center mt-10">
           <div
-            className={` flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center justify-center rounded-md border px-4 py-3 text-sm max-w-lg w-full${confirmedSearch === "" ? "border-blue-300 bg-blue-50 text-blue-700" : "border-red-300 bg-red-50 text-red-700"}`}
+            className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center justify-center rounded-md border px-4 py-3 text-sm max-w-lg w-full ${
+              confirmedSearch === ""
+                ? "border-blue-300 bg-blue-50 text-blue-700"
+                : "border-red-300 bg-red-50 text-red-700"
+            }`}
           >
             {confirmedSearch === "" ? (
               <span className="font-medium">
@@ -144,19 +159,14 @@ function App() {
             ) : (
               <>
                 <span className="font-medium">No recipes found for</span>
-
-                <span className="italic break-all sm:break-normal">
-                  "{confirmedSearch}"
-                </span>
-
-                <span>. Try another search term!</span>
+                <span className="italic">"{confirmedSearch}"</span>
               </>
             )}
           </div>
         </section>
       )}
 
-      <ListRecipes recipes={recipes} search={confirmedSearch} />
+      {!isLoading && <ListRecipes recipes={recipes} search={confirmedSearch} />}
     </main>
   );
 }
