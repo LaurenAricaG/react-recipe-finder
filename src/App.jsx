@@ -13,6 +13,7 @@ const SEARCH_BY_MAIN_INGREDIENT =
   "https://www.themealdb.com/api/json/v1/1/filter.php?i=";
 
 const SEARCH_TYPES = {
+  reset: { label: "Restart", url: SEARCH_BY_NAME },
   name: { label: "Name", url: SEARCH_BY_NAME },
   category: { label: "Category", url: FILTER_BY_CATEGORY },
   area: { label: "Area", url: FILTER_BY_AREA },
@@ -21,22 +22,15 @@ const SEARCH_TYPES = {
 };
 
 function App() {
+  const RESET_URL = SEARCH_BY_NAME + "egg";
+  const INITIAL_URL = SEARCH_BY_NAME + "pork";
+
   const [recipes, setRecipes] = useState([]);
   const [search, setSearch] = useState("");
-  const [confirmedSearch, setConfirmedSearch] = useState("");
+
+  const [confirmedSearch, setConfirmedSearch] = useState("pork");
   const [searchType, setSearchType] = useState("name");
-
-  const [requestUrl, setRequestUrl] = useState(SEARCH_BY_NAME + "pork");
-
-  useEffect(() => {
-    axios
-      .get(requestUrl)
-      .then(({ data }) => {
-        setRecipes(data.meals || []);
-        setConfirmedSearch("pork");
-      })
-      .catch(console.log);
-  }, []);
+  const [requestUrl, setRequestUrl] = useState(INITIAL_URL);
 
   useEffect(() => {
     if (!requestUrl) return;
@@ -68,7 +62,18 @@ function App() {
   };
 
   const handleSearchTypeChange = (e) => {
-    setSearchType(e.target.value);
+    const value = e.target.value;
+
+    if (value === "reset") {
+      setSearchType("reset");
+      setSearch("");
+      setConfirmedSearch("pork");
+      setRecipes([]);
+      setRequestUrl(RESET_URL);
+      return;
+    }
+
+    setSearchType(value);
     setSearch("");
     setConfirmedSearch("");
     setRecipes([]);
@@ -107,8 +112,13 @@ function App() {
           value={search}
           onChange={handleInputChange}
           maxLength={searchType === "letter" ? 1 : undefined}
+          disabled={searchType === "reset"}
           placeholder={
-            searchType === "letter" ? "One letter only" : "Type your search"
+            searchType === "reset"
+              ? "List of recipes"
+              : searchType === "letter"
+                ? "One letter only"
+                : "Type your search"
           }
           className="w-full sm:max-w-md px-4 py-2 border rounded-lg"
         />
